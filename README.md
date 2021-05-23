@@ -1,3 +1,4 @@
 ## ServerStatus-go
 
-InDev.
+Already completed:
+    C/S Encryprted handshake.

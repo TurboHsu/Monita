@@ -1,5 +1,6 @@
 {
-    "server_addr": "http://127.0.0.1:8000",
+    "server_addr": "http://127.0.0.1:8000/api",
     "server_key": "f3wjSKDvfrQnr2akdbLnUrrWgB6i48wE",
-    "client_name": "Test"
+    "client_name": "Test",
+    "post_interval": 1
 }

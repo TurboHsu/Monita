@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -17,43 +19,69 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+var config clientConfig
+
 func main() {
 	//Read Config.
 	configFile, err := os.Open("config.json")
 	if err != nil {
-		log.Fatal("[E] Read config failed.")
-		log.Fatal(err)
+		log.Fatal("[E] Read config failed:", err)
 	}
 	defer configFile.Close()
 	byteValue, _ := ioutil.ReadAll(configFile)
-	var config clientConfig
+
 	json.Unmarshal([]byte(byteValue), &config)
 
 	//Client Hello
 	message := "Client Hello!"
 	encrypted, err := AesEncrypt([]byte(message), []byte(config.ServerKey))
 	if err != nil {
-		log.Fatal("[E] Encrypt data error!")
+		log.Fatal("[E] Encrypt data error:", err)
 		return
 	}
 	encrypted64 := base64.StdEncoding.EncodeToString(encrypted)
-	// This is encrypted data, go and post to server side, throw back Server OK response.
+
+	handshake, _ := http.NewRequest("POST", config.ServerAddr, strings.NewReader(encrypted64))
+	handshakeResp, err := http.DefaultClient.Do(handshake)
+	if err != nil {
+		log.Fatal("[E] Post data error:", err)
+	} else {
+		handshakeRespDataCrypted64, _ := ioutil.ReadAll(handshakeResp.Body)
+		handshakeRespDataCrypted, _ := base64.StdEncoding.DecodeString(string(handshakeRespDataCrypted64))
+		handshakeRespData, _ := AesDecrypt([]byte(string(handshakeRespDataCrypted)), []byte(config.ServerKey))
+		if string(handshakeRespData) == "Server Hello!" {
+			log.Println("[I] Handshake success to", config.ServerAddr)
+		} else {
+			log.Fatal("[E] Server handshake failed: Response not match:", string(handshakeRespData))
+		}
+	}
 
 	//Examples for machine info.
 	fmt.Println(encrypted64)
 	fmt.Println(getCpuPercent())
 	fmt.Println(getMemPercent())
 	fmt.Println(getDiskPercent())
+	log.Println("[I] Start post loop by:", config.PostInterval, "*Second")
+	for true {
+		time.Sleep(config.PostInterval * time.Second)
+		sendData()
+	}
 }
 
 // Datasets
 type clientConfig struct {
-	ServerAddr string `json:"server_addr"`
-	ServerKey  string `json:"server_key"`
-	ClientName string `json:"client_name"`
+	ServerAddr   string        `json:"server_addr"`
+	ServerKey    string        `json:"server_key"`
+	ClientName   string        `json:"client_name"`
+	PostInterval time.Duration `json:"post_interval"`
 }
 
 // Funcs
+func sendData() {
+	fmt.Println("test")
+	//Gotta to send data here.
+}
+
 func getCpuPercent() float64 {
 	percent, _ := cpu.Percent(time.Second, false)
 	return percent[0]
