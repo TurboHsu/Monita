@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var config serverConfig
@@ -25,27 +25,34 @@ func main() {
 	byteValue, _ := ioutil.ReadAll(configFile)
 	json.Unmarshal([]byte(byteValue), &config)
 
+	log.Println("[I] Server started at:", config.ListenAddr, config.APIServePath)
 	//Start Web Listener
-	http.HandleFunc("/api", APIHandler)
-	http.ListenAndServe(":8000", nil)
+	http.HandleFunc(config.APIServePath, APIHandler)
+	http.ListenAndServe(config.ListenAddr, nil)
 }
 
 //Datasets
 type serverConfig struct {
-	ServerKey string `json:"server_key"`
+	ServerKey    string `json:"server_key"`
+	ListenAddr   string `json:"listen_addr"`
+	APIServePath string `json:"api_serve_path"`
 }
 
 // Funcs
 
 func APIHandler(w http.ResponseWriter, r *http.Request) {
-	dataRaw, _ := ioutil.ReadAll(r.Body)
-	dataCrypted, _ := base64.StdEncoding.DecodeString(string(dataRaw))
+	dataCrypted, _ := ioutil.ReadAll(r.Body)
 	data, _ := AesDecrypt([]byte(dataCrypted), []byte(config.ServerKey))
-	fmt.Printf(string(data))
 	if string(data) == "Client Hello!" { //Deal with ClientHello
 		msg, _ := AesEncrypt([]byte("Server Hello!"), []byte(config.ServerKey))
-		fmt.Fprintf(w, string(base64.StdEncoding.EncodeToString(msg)))
+		fmt.Fprintf(w, string(msg))
 		log.Println("[I] Served handshake from:", r.RemoteAddr)
+	} else if strings.Contains(string(data), "CLIDATA") { //Deal with Client data.
+		msg, _ := AesEncrypt([]byte("RECEIVED"), []byte(config.ServerKey))
+		fmt.Fprintf(w, string(msg))
+		processedData := strings.Split(string(data), "|")
+		fmt.Println(processedData)
+
 	}
 
 	//Gotta to write some functions.
@@ -59,46 +66,38 @@ func APIHandler(w http.ResponseWriter, r *http.Request) {
 	*/
 }
 
-//@brief:填充明文
 func PKCS5Padding(plaintext []byte, blockSize int) []byte {
 	padding := blockSize - len(plaintext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(plaintext, padtext...)
 }
 
-//@brief:去除填充数据
 func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
 }
 
-//@brief:AES加密
 func AesEncrypt(origData, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-
-	//AES分组长度为128位，所以blockSize=16，单位字节
 	blockSize := block.BlockSize()
 	origData = PKCS5Padding(origData, blockSize)
-	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize]) //初始向量的长度必须等于块block的长度16字节
+	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize])
 	crypted := make([]byte, len(origData))
 	blockMode.CryptBlocks(crypted, origData)
 	return crypted, nil
 }
 
-//@brief:AES解密
 func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-
-	//AES分组长度为128位，所以blockSize=16，单位字节
 	blockSize := block.BlockSize()
-	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize]) //初始向量的长度必须等于块block的长度16字节
+	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
 	origData := make([]byte, len(crypted))
 	blockMode.CryptBlocks(origData, crypted)
 	origData = PKCS5UnPadding(origData)
