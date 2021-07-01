@@ -42,7 +42,7 @@ func main() {
 	var data string
 	for true {
 		time.Sleep(config.PostInterval * time.Millisecond)
-		data = fmt.Sprintf("CLIDATA|%v|%v|%v|%v", time.Now().Unix(), getCPUPercent(), getMemPercent(), getDiskPercent())
+		data = fmt.Sprintf("CLIDATA|%v|%v|%v|%v|%v", config.ClientName, time.Now().Unix(), getCPUPercent(), getMemPercent(), getDiskPercent())
 		if sendData(data) != "RECEIVED" {
 			log.Println("[E] Response missing.")
 		}

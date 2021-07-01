@@ -14,6 +14,7 @@ import (
 )
 
 var config serverConfig
+var dataRec [][]string
 
 func main() {
 	//Read Config
@@ -51,19 +52,47 @@ func APIHandler(w http.ResponseWriter, r *http.Request) {
 		msg, _ := AesEncrypt([]byte("RECEIVED"), []byte(config.ServerKey))
 		fmt.Fprintf(w, string(msg))
 		processedData := strings.Split(string(data), "|")
-		fmt.Println(processedData)
+		//[0] CLIDATA [1] CliName [2]UNIXTime [3]CPURate [4]MemRate [5]DiskRate
+
+		//Write into dataRec
+		var existStat bool //Define a bool to judge whether this client exists.
+
+		for i := 0; i < len(dataRec); i++ {
+			if dataRec[i][0] == processedData[1] {
+				dataRec[i][1] = processedData[2]
+				dataRec[i][2] = processedData[3]
+				dataRec[i][3] = processedData[4]
+				dataRec[i][4] = processedData[5] //Write into dataRec.
+				existStat = true                 //Set bool to ture.
+			}
+		}
+		if existStat != true { //If bool isnt ture, then this data isn't exist, or dataRec is empty.
+			dataRec = append(dataRec, []string{processedData[1], processedData[2], processedData[3], processedData[4], processedData[5]})
+		}
+		//dataRec [[0] CliName [1]UNIXTime [2]CPURate [3]MemRate [4]DiskRate],[]...
+
+		//Write into file
+		filePath := fmt.Sprintf("./data/%v", processedData[1])
+		_, err := os.Stat(filePath)
+		if err != nil {
+			f, err := os.Create(filePath)
+			defer f.Close()
+			if err != nil {
+				log.Println("[E] File create error:", err)
+			}
+		}
+
+		recFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Println("[E] File open err:", err)
+		}
+		defer recFile.Close()
+		if _, err = recFile.WriteString(fmt.Sprintf("%v|%v|%v|%v||", processedData[2], processedData[3], processedData[4], processedData[5])); err != nil {
+			log.Println("[E] File write err:", err)
+		}
 
 	}
 
-	//Gotta to write some functions.
-	/*
-		一些设想：
-		准备使用litesql之类的数据库，
-		接收到数据之后存入数据表，用客户端发送的唯一名称来命名，然后记录下他什么时间是什么数值。
-		用json之类的存储也行，这个再说，或者说这个过程由客户端来完成也行，数据存储在客户端那边，需要的时候再拉取。
-
-		网页方面想要实现监视的样子，然后还有实时数据显示，图表啊啥的（美丽的设想
-	*/
 }
 
 func PKCS5Padding(plaintext []byte, blockSize int) []byte {
