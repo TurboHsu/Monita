@@ -87,7 +87,7 @@ func APIHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("[E] File open err:", err)
 		}
 		defer recFile.Close()
-		if _, err = recFile.WriteString(fmt.Sprintf("%v|%v|%v|%v||", processedData[2], processedData[3], processedData[4], processedData[5])); err != nil {
+		if _, err = recFile.WriteString(fmt.Sprintf("%v|%v|%v|%v\n", processedData[2], processedData[3], processedData[4], processedData[5])); err != nil {
 			log.Println("[E] File write err:", err)
 		}
 
