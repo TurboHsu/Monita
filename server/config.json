@@ -1,5 +1,5 @@
 {
-    "server_key": "f3wjSKDvfrQnr2akdbLnUrrWgB6i48wE",
+    "server_key": "Server_Key",
     "listen_addr": "127.0.0.1:8000",
     "api_serve_path": "/api"
 }

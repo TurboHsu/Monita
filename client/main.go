@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,6 +33,9 @@ func main() {
 	byteValue, _ := ioutil.ReadAll(configFile)
 
 	json.Unmarshal([]byte(byteValue), &config)
+
+	//Calculate MD5 of ServerKey for AES256 Encryption.
+	config.ServerKey = md5Calc(config.ServerKey)
 
 	if sendData("Client Hello!") != "Server Hello!" {
 		log.Fatal("[E] Handshake failed.")
@@ -94,18 +99,21 @@ func getDiskPercent() float64 {
 	return ret
 }
 
+//PKCS5Padding for AES
 func PKCS5Padding(plaintext []byte, blockSize int) []byte {
 	padding := blockSize - len(plaintext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(plaintext, padtext...)
 }
 
+//PKCS5UnPadding for AES
 func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
 }
 
+//AesEncrypt encrypts []byte with key.
 func AesEncrypt(origData, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -119,6 +127,7 @@ func AesEncrypt(origData, key []byte) ([]byte, error) {
 	return crypted, nil
 }
 
+//AesDecrypt decrypts []byte with key.
 func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -130,4 +139,10 @@ func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	blockMode.CryptBlocks(origData, crypted)
 	origData = PKCS5UnPadding(origData)
 	return origData, nil
+}
+
+func md5Calc(str string) string {
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
 }
