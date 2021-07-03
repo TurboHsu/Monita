@@ -30,23 +30,68 @@ func main() {
 
 	//Calculate MD5 of ServerKey for AES256 Encryption.
 	config.ServerKey = md5Calc(config.ServerKey)
-	log.Println("[I] Server started at:", config.ListenAddr, config.APIServePath)
+	log.Println("[I] CLIAPI Server started at:", config.ListenAddr, config.CLIAPIServePath)
 	//Start Web Listener
-	http.HandleFunc(config.APIServePath, APIHandler)
+	http.HandleFunc(config.CLIAPIServePath, CLIAPIHandler)
+	http.HandleFunc(config.WEBAPIServePath, WEBAPIHandler)
 	http.ListenAndServe(config.ListenAddr, nil)
 }
 
 //Datasets
 type serverConfig struct {
-	ServerKey    string `json:"server_key"`
-	ListenAddr   string `json:"listen_addr"`
-	APIServePath string `json:"api_serve_path"`
+	ServerKey       string `json:"server_key"`
+	ListenAddr      string `json:"listen_addr"`
+	CLIAPIServePath string `json:"cli_api_serve_path"`
+	WEBAPIServePath string `json:"web_api_serve_path"`
+	WEBAPIAccessKey string `json:"web_api_key"`
+}
+
+type dataRealtimeOutput struct {
+	ServerStatus []dataRealtimeOutputServers `json:"status"`
+}
+
+type dataRealtimeOutputServers struct {
+	ServerName     string `json:"name"`
+	ServerUNIXTime string `json:"unix_time"`
+	ServerCPURate  string `json:"cpu_rate"`
+	ServerMemRate  string `json:"mem_rate"`
+	ServerDiskRate string `json:"disk_rate"`
+}
+
+type dataSavedOutput struct {
 }
 
 // Funcs
 
-//APIHandler deals with HTTP Requests
-func APIHandler(w http.ResponseWriter, r *http.Request) {
+//WebReq: type datanow/datasaved
+
+//WEBAPIHandler deals with web requests.
+func WEBAPIHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("[E] Cannot parse form from:", r.Host, err)
+	}
+	if r.FormValue("key") == config.WEBAPIAccessKey {
+		if r.FormValue("type") == "datanow" {
+			var data dataRealtimeOutput
+			for i := 0; i < len(dataRec); i++ {
+				data.ServerStatus = append(data.ServerStatus, dataRealtimeOutputServers{ServerName: dataRec[i][0], ServerUNIXTime: dataRec[i][1], ServerCPURate: dataRec[i][2], ServerMemRate: dataRec[i][3], ServerDiskRate: dataRec[i][4]})
+			}
+			dataJSON, err := json.Marshal(data)
+			if err != nil {
+				log.Println("[E] JSON Marshal failed while processing response data:", err)
+			}
+			fmt.Fprintf(w, string(dataJSON))
+		} else if r.FormValue("type") == "datasaved" {
+			//Read from file.
+		}
+	} else {
+		fmt.Fprintf(w, "Forbidden.")
+	}
+}
+
+//CLIAPIHandler deals with Client Requests
+func CLIAPIHandler(w http.ResponseWriter, r *http.Request) {
 	dataCrypted, _ := ioutil.ReadAll(r.Body)
 	data, _ := AesDecrypt([]byte(dataCrypted), []byte(config.ServerKey))
 	if string(data) == "Client Hello!" { //Deal with ClientHello

@@ -1,10 +1,11 @@
 package main
 
-import (
-	"encoding/hex"
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	fmt.Println(hex.EncodeToString([]byte("What")))
+	var data [][]string
+	data = append(data, []string{"1", "2"})
+	data = append(data, []string{"4", "8"})
+	fmt.Println(data)
+	fmt.Println(len(data))
 }

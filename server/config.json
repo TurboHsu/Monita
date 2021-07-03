@@ -1,5 +1,7 @@
 {
     "server_key": "Server_Key",
     "listen_addr": "127.0.0.1:8000",
-    "api_serve_path": "/api"
+    "cli_api_serve_path": "/cliapi",
+    "web_api_serve_path": "/webapi",
+    "web_api_key": "Webapi_Key"
 }
