@@ -1,4 +1,6 @@
 ## Monita
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FTurboHsu%2FMonita.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FTurboHsu%2FMonita?ref=badge_shield)
+
 
 ### Monita, Monitor every server, in a better way.
 
@@ -19,3 +21,6 @@ Todo:
 Maybe todo:
     Customize data received.
     Make server & client in one program.~~?~~
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FTurboHsu%2FMonita.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FTurboHsu%2FMonita?ref=badge_large)
